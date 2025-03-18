@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session Buddy JSON to HTML converter</title>
+  <style id="mainStyle">
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+            padding-top: 20px;
+        }
+        ol {
+            padding: 0;
+        }
+        li {
+            padding: 0;
+        }
+        .bookmark {
+            margin: 20px 0;
+            padding: 15px;
+            margin-left: 1%;
+            background-color: #ffffff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s, transform 0.3s;
+            font-size: 18px;
+            line-height: 1.5;
+        }
+        .bookmark:hover {
+            background-color: #d1e7fd;
+            transform: scale(1.02);
+        }
+        a {
+            text-decoration: none;
+            color: #007BFF;
+            display: block;
+            height: 100%;
+            width: 98%;
+            margin-left: 20px;
+        }
+        a:hover {
+            color: #0056b3;
+        }
+        .favimg {
+            width: 16px;
+            margin-right: 6px;   
+        }
+  </style>
+  <style id="appStyle">
+        #appElements {
+            font-size: 20px;
+        }
+        input[type="file"], button {
+            display: inline-block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+  </style>
+</head>
+<body>
+  <div id="appElements">
+    <span>Select file to view:</span>
+    <input type="file" id="fileInput" accept=".json">
+    <button id="saveButton" style="display: none;">Save as HTML</button>
+    <hr>
+  </div>
+  <h1>Collections</h1>
+  <ol id="bookmarkList">
+  </ol>
+  <script id="mainScript">
+    let jsonFilename = ''; // Variable to store the JSON filename
+    let finalTitle = ''; // Variable to store title of final document
+
+    document.getElementById('fileInput').addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      if (file) {
+        jsonFilename = file.name.replace(/\.[^/.]+$/, ""); // Extract filename without extension
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            const bookmarks = JSON.parse(e.target.result);
+            displayBookmarks(bookmarks);
+          } catch (error) {
+            console.error('Error parsing JSON:', error);
+            alert('Invalid JSON format. Please check your file.');
+          }
+        };
+        reader.readAsText(file);
+      }
+    });
+
+    function displayBookmarks(data) {
+      const bookmarkList = document.getElementById('bookmarkList');
+      bookmarkList.innerHTML = ''; // Clear previous bookmarks
+
+      // Concatenate collection titles
+      finalTitle = data.collections.map(collection => collection.title).join(', ');
+
+      // Iterate through collections
+      data.collections.forEach(collection => {
+        const collectionTitle = document.createElement('h2');
+        collectionTitle.textContent = collection.title;
+        bookmarkList.appendChild(collectionTitle);
+        bookmarkList.appendChild(document.createTextNode('\n'));
+
+        // Iterate through folders in each collection
+          collection.folders.forEach(folder => {
+
+          const folderSeparator = document.createElement('hr');
+          bookmarkList.appendChild(folderSeparator);
+          bookmarkList.appendChild(document.createTextNode('\n'));
+
+        // Iterate through links in each folder
+          folder.links.forEach(link => {
+            const listItem = document.createElement('li');
+            const anchor = document.createElement('a');
+            anchor.href = link.url;
+            anchor.target = "_blank";
+            anchor.className = "bookmark";
+            anchor.textContent = link.title;
+
+            // Optionally, you can add the favicon if it exists
+            if (link.favIconUrl) {
+              const favicon = document.createElement('img');
+              favicon.src = link.favIconUrl;
+              favicon.alt = " ";
+              favicon.className = "favimg";
+              anchor.prepend(favicon); // Add favicon to the anchor
+            }
+
+            listItem.appendChild(anchor);
+            bookmarkList.appendChild(listItem);
+            bookmarkList.appendChild(document.createTextNode('\n'));
+          });
+        });
+      });
+
+      // Show the save button after displaying bookmarks
+      document.getElementById('saveButton').style.display = 'inline-block';
+    }
+
+    document.getElementById('saveButton').addEventListener('click', function() {
+      // Create a deep copy of the current document
+      const clonedDocument = document.cloneNode(true);
+
+      // List of IDs to remove from the cloned document
+      const idsToRemove = ["mainScript", "appStyle", "appElements"];
+
+      // Remove elements by their IDs
+      idsToRemove.forEach(id => {
+        const element = clonedDocument.getElementById(id);
+        if (element) {
+          element.parentNode.removeChild(element);
+        }
+      });
+
+      // Set the title of the cloned document to the concatenated collection titles
+      const titleElement = clonedDocument.getElementsByTagName('title')[0];
+      titleElement.textContent = finalTitle; // Set the title
+
+
+      // Create a new Blob from the modified cloned document
+      const htmlContent = `<!DOCTYPE html>${clonedDocument.documentElement.outerHTML}`;
+      //const htmlContent = clonedDocument.documentElement.outerHTML;
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${jsonFilename}.html`; // Name of the file to be downloaded
+      document.body.appendChild(a);
+      a.click(); // Programmatically click the link to trigger the download
+      document.body.removeChild(a); // Clean up by removing the link
+      URL.revokeObjectURL(url); // Release the object URL
+    });
+  </script>
+</body>
+</html>
