@@ -1,77 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Session Buddy JSON to HTML converter</title>
   <style id="mainStyle">
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background-color: #f4f4f4;
-            color: #333;
-        }
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-        }
-        h2 {
-            text-align: center;
-            color: #2c3e50;
-            padding-top: 20px;
-        }
-        ol {
-            padding: 0;
-        }
-        li {
-            padding: 0;
-        }
-        .bookmark {
-            margin: 20px 0;
-            padding: 15px;
-            margin-left: 1%;
-            background-color: #ffffff;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            transition: background-color 0.3s, transform 0.3s;
-            font-size: 18px;
-            line-height: 1.5;
-        }
-        .bookmark:hover {
-            background-color: #d1e7fd;
-            transform: scale(1.02);
-        }
-        a {
-            text-decoration: none;
-            color: #007BFF;
-            display: block;
-            height: 100%;
-            width: 98%;
-            margin-left: 20px;
-        }
-        a:hover {
-            color: #0056b3;
-        }
-        .favimg {
-            width: 16px;
-            margin-right: 6px;   
-        }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f4f4f4;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+    }
+
+    h2 {
+      text-align: center;
+      color: #1c2e40;
+      padding-top: 20px;
+    }
+
+    h3 {
+      text-align: left;
+      color: #5f5f5f;
+    }
+
+    hr {
+      margin: 0px;
+      margin-top: 1.50em;
+    }
+
+    ol {
+      padding: 0px 0px 0px 60px;
+      margin: 0px 0px 0px 0px;
+    }
+
+    .bookmark {
+      margin: 5px 0;
+      padding: 8px 0px 8px 8px;
+      margin-left: 1%;
+      background-color: #ffffff;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.3s, transform 0.3s;
+      font-size: 18px;
+      line-height: 1.2;
+    }
+
+    .bookmark:hover {
+      background-color: #d1e7fd;
+      transform: scale(1.02);
+    }
+
+    a {
+      text-decoration: none;
+      color: #007BFF;
+      display: block;
+    }
+
+    a:hover {
+      color: #003693;
+    }
+
+    .favimg {
+      width: 16px;
+      margin: 0px 6px 3px 0px;
+      vertical-align: middle;
+    }
   </style>
   <style id="appStyle">
-        #appElements {
-            font-size: 20px;
-        }
-        input[type="file"], button {
-            display: inline-block;
-            margin: 20px auto;
-            padding: 10px 20px;
-            font-size: 20px;
-            cursor: pointer;
-        }
+    #appElements {
+      font-size: 20px;
+    }
 
+    input[type="file"],
+    button {
+      display: inline-block;
+      margin: 20px auto;
+      padding: 10px 20px;
+      font-size: 20px;
+      cursor: pointer;
+    }
   </style>
 </head>
+
 <body>
   <div id="appElements">
     <span>Select file to view:</span>
@@ -80,19 +97,20 @@
     <hr>
   </div>
   <h1>Collections</h1>
-  <ol id="bookmarkList">
-  </ol>
+  <div id="bookmarkList">
+
+  </div>
   <script id="mainScript">
     let jsonFilename = ''; // Variable to store the JSON filename
     let finalTitle = ''; // Variable to store title of final document
 
-    document.getElementById('fileInput').addEventListener('change', function(event) {
+    document.getElementById('fileInput').addEventListener('change', function (event) {
       const file = event.target.files[0];
       if (file) {
         jsonFilename = file.name.replace(/\.[^/.]+$/, ""); // Extract filename without extension
 
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = function (e) {
           try {
             const bookmarks = JSON.parse(e.target.result);
             displayBookmarks(bookmarks);
@@ -105,32 +123,52 @@
       }
     });
 
+    function cleanupUrl(link) {
+      const linkUrl = new URL(link);
+      // Check if the URL matches the specified protocol and page name (to work with suspender extension)
+      if (linkUrl.protocol === 'chrome-extension:' && linkUrl.pathname === '/suspended.html') {
+        const modifiedUrl = new URL(link.replace('suspended.html#', 'suspended.html?'));
+        const uri = modifiedUrl.searchParams.get('uri');
+        if (uri) {
+          return uri;
+        }
+      }
+      return link; // Return the final URL
+    }
+
+    function appendWithNewline(parent, child) {
+      parent.appendChild(child);
+      parent.appendChild(document.createTextNode('\n'));
+    }
+
     function displayBookmarks(data) {
       const bookmarkList = document.getElementById('bookmarkList');
       bookmarkList.innerHTML = ''; // Clear previous bookmarks
 
       // Concatenate collection titles
-      finalTitle = data.collections.map(collection => collection.title).join(', ');
+      finalTitle = data.collections.map(collection => collection.title || "Unnamed").join(', ');
 
       // Iterate through collections
       data.collections.forEach(collection => {
         const collectionTitle = document.createElement('h2');
-        collectionTitle.textContent = collection.title;
-        bookmarkList.appendChild(collectionTitle);
-        bookmarkList.appendChild(document.createTextNode('\n'));
+        collectionTitle.textContent = collection.title || "Unnamed";
+        appendWithNewline(bookmarkList, collectionTitle);
 
         // Iterate through folders in each collection
-          collection.folders.forEach(folder => {
+        collection.folders.forEach(folder => {
+          appendWithNewline(bookmarkList, document.createElement('hr'));
 
-          const folderSeparator = document.createElement('hr');
-          bookmarkList.appendChild(folderSeparator);
-          bookmarkList.appendChild(document.createTextNode('\n'));
+          const folderTitle = document.createElement('h3');
+          folderTitle.textContent = "Folder: " + (folder.title || "Unnamed");
+          appendWithNewline(bookmarkList, folderTitle);
 
-        // Iterate through links in each folder
+          const linkList = document.createElement('ol');
+
+          // Iterate through links in each folder
           folder.links.forEach(link => {
             const listItem = document.createElement('li');
             const anchor = document.createElement('a');
-            anchor.href = link.url;
+            anchor.href = cleanupUrl(link.url);
             anchor.target = "_blank";
             anchor.className = "bookmark";
             anchor.textContent = link.title;
@@ -145,9 +183,10 @@
             }
 
             listItem.appendChild(anchor);
-            bookmarkList.appendChild(listItem);
-            bookmarkList.appendChild(document.createTextNode('\n'));
+            appendWithNewline(linkList, listItem);
           });
+
+          appendWithNewline(bookmarkList, linkList);
         });
       });
 
@@ -155,7 +194,7 @@
       document.getElementById('saveButton').style.display = 'inline-block';
     }
 
-    document.getElementById('saveButton').addEventListener('click', function() {
+    document.getElementById('saveButton').addEventListener('click', function () {
       // Create a deep copy of the current document
       const clonedDocument = document.cloneNode(true);
 
